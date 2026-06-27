@@ -18,6 +18,15 @@ body:
       required: true
 
   - type: textarea
+    id: browser
+    attributes:
+      label: Browser
+      description: What browser are you using?
+      placeholder: Chrome, Firefox, Safari, Edge, etc.
+    validations:
+      required: true
+
+  - type: textarea
     id: current-behavior
     attributes:
       label: Current Behavior
