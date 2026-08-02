@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify, g
 from Services.WorkoutDriver import WorkoutDriver
+from Services.PersonalExDriver import PersonalExDriver
 from Auth.verification import login_required_user, login_required_dev, login_required_admin, login_required_gym_owner
 
 workoutRouteBlueprint = Blueprint("workouts", __name__, url_prefix="/AHFULworkouts")
@@ -25,29 +26,6 @@ def get_workouts_by_user(user_id):
         return jsonify({"error": error}), 404
     return jsonify(workouts), 200
 
-# ── GET all templates for a specific user ──────────────────────────────────────
-@workoutRouteBlueprint.route("/templates/user/<user_id>", methods=["GET"])
-@login_required_user
-def get_templates(user_id):
-    # Own user request, devs or admins only
-    if (user_id != g.user_id) and (g.role != "Developer") and (g.role != "Admin"):
-        return jsonify({"error": "You may only access your own data"}), 403
-    workouts, error = WorkoutDriver.get_user_templates(user_id)
-    if error:
-        return jsonify({"error": error}), 404
-    return jsonify(workouts), 200
-
-# ── GET template by id ──────────────────────────────────────
-@workoutRouteBlueprint.route("/templates/<id>", methods=["GET"])
-@login_required_user
-def get_template(template_id):
-    res, err = WorkoutDriver.verify_operation(g.user_id, template_id)
-    if err:
-        return jsonify({"error": err}), 400
-    workouts, error = WorkoutDriver.get_template(template_id)
-    if error:
-        return jsonify({"error": error}), 404
-    return jsonify(workouts), 200
 
 # ── GET single workout ────────────────────────────────────────────────────────
 @workoutRouteBlueprint.route("/id/<workout_id>", methods=["GET"])
@@ -80,23 +58,6 @@ def create_workout():
     if error:
         return jsonify({"error": error}), 400
     return jsonify({"workout_id": workout_id, "message": "Workout created"}), 201
-
-# ── CREATE template ────────────────────────────────────────────────────────────
-@workoutRouteBlueprint.route("/create/template", methods=["POST"])
-@login_required_user
-def create_template():
-    data = request.get_json()
-    if not data:
-        return jsonify({"error": "No data provided"}), 400
-
-    workout_id, error = WorkoutDriver.create_template(
-        user_id=g.user_id,
-        title=data.get("title")
-    )
-
-    if error:
-        return jsonify({"error": error}), 400
-    return jsonify({"workout_id": workout_id, "message": "Template created"}), 201
 
 # Only update own? dev for now
 # ── UPDATE personalEx ───────────────────────────────────────────────────────────
@@ -131,19 +92,35 @@ def update_workout(workout_id):
 # Only delete own? dev for now
 # ── DELETE workout ────────────────────────────────────────────────────────────────
 @workoutRouteBlueprint.route("/delete/<workout_id>", methods=["DELETE"])
-@login_required_dev
+@login_required_user
 def delete_workout(workout_id):
     if not workout_id:
         return jsonify({"error": "You must provide a workout id to delete"}), 400
 
-    res, err = WorkoutDriver.verify_operation(g.user_id, workout_id)
+    # Verify that the user has permission to delete this workout
+    verifiyResponse, err = WorkoutDriver.verify_operation(g.user_id, workout_id)
     if err:
         return jsonify({"error": err}), 400
 
-    response, error = WorkoutDriver.delete_workout(workout_id)
-    if error:
-        return jsonify({"error": error}), 400
-    return jsonify({"message": "Workout deleted", "workout_id": response}), 200
+    personalExercises, error = PersonalExDriver.get_personal_exs_by_workout(workout_id)
+
+
+    if personalExercises is None:
+        response, error = WorkoutDriver.delete_workout(workout_id)
+        if error:
+            return jsonify({"error": error}), 400
+        return jsonify({"ok": True, "message": "Workout Deleted. No personal exercises found for workout.", "workout_id": response}), 200
+
+    else:
+        for personalEx in personalExercises:
+            deleteResponse, deleteError = PersonalExDriver.delete_personal_ex(personalEx["_id"])
+            if deleteError:
+                return jsonify({"error": deleteError}), 400
+
+        response, error = WorkoutDriver.delete_workout(workout_id)
+        if error:
+            return jsonify({"error": error}), 400
+        return jsonify({"ok": True, "message": "Workout and related Personal Exercises deleted", "workout_id": response}), 200
 
 # ── GET workout streak for user ──────────────────────────────────────
 @workoutRouteBlueprint.route("/streak/<user_id>", methods=["GET"])

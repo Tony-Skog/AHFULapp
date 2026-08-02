@@ -225,7 +225,7 @@ export async function whoami() {
 // ──  Template functions ─────────────────────────────────────────────────────────
 export async function fetchTemplate(userId) {
   const res = await fetch(
-    `http://localhost:5000/api/AHFULworkouts/templates/user/${userId}`,{
+    `http://localhost:5000/api/AHFULtemplate/user`,{
       credentials: 'include'
     }
   );
@@ -245,7 +245,7 @@ export async function fetchTemplate(userId) {
 export async function createTemplate(templateData) {
   try {
     const res = await fetch(
-      "http://localhost:5000/api/AHFULworkouts/create/template",
+      "http://localhost:5000/api/AHFULtemplate/create",
       {
         method: "POST",
         credentials: 'include',
@@ -637,6 +637,21 @@ export async function updateWorkout(workoutId, data) {
   return res.json();
 }
 
+export async function deleteWorkout(workoutId) {
+  const backendResponse = await fetch(
+    `http://localhost:5000/api/AHFULworkouts/delete/${workoutId}`,
+    {
+      method: "DELETE",
+      credentials: 'include',
+    }
+  );
+  if (!backendResponse.ok) {
+    const err = await backendResponse.text();
+    throw new Error(`Failed to delete workout: ${backendResponse.status} ${err}`);
+  }
+  return backendResponse.json();
+}
+
 // ── Personal Exercise Functions ─────────────────────────────────────────────────
 
 export async function fetchPersonalExerciseById(userId) {
@@ -934,7 +949,6 @@ export async function toggleFoodFavorite(foodId) {
     }
 
     const data = await res.json();
-    console.log("toggleFoodFavorite response:", data);
     const food = data.food || data;
     return { data: food, error: null };
   } catch (err) {
