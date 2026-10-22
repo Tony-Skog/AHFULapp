@@ -16,6 +16,22 @@ body:
         - iOS
     validations:
       required: true
+  - type: textarea
+    id: browser
+    attributes:
+      label: Browser
+      description: What browser & version are you using?
+      placeholder: e.g. Chrome 126, Firefox 128, Safari 17.5
+    validations:
+      required: true
+  - type: textarea
+    id: browser
+    attributes:
+      label: Browser
+      description: What browser are you using?
+      placeholder: Chrome, Firefox, Safari, Edge, etc.
+    validations:
+      required: true
 
   - type: textarea
     id: browser
@@ -39,7 +55,6 @@ body:
       placeholder: Describe what the bug is doing...
     validations:
       required: true
-
   - type: textarea
     id: expected-behavior
     attributes:
